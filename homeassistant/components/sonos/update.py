@@ -1,5 +1,6 @@
 """Support for Sonos software updates."""
 
+import asyncio
 import datetime as dt
 import logging
 from typing import TYPE_CHECKING, Any, override
@@ -14,10 +15,13 @@ from homeassistant.components.update import (
     UpdateEntityFeature,
 )
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.dispatcher import (
+    async_dispatcher_connect,
+    async_dispatcher_send,
+)
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import SONOS_CREATE_UPDATE
+from .const import SONOS_CREATE_UPDATE, SONOS_REBOOTED
 from .entity import SonosPollingEntity
 from .exception import SonosUpdateError
 from .helpers import SonosConfigEntry, soco_error
@@ -26,6 +30,8 @@ from .speaker import SonosSpeaker
 _LOGGER = logging.getLogger(__name__)
 
 SCAN_INTERVAL = dt.timedelta(hours=1)
+REBOOT_POLL_INTERVAL = 5
+REBOOT_TIMEOUT = 300
 
 PARALLEL_UPDATES = 1
 
@@ -66,6 +72,12 @@ class SonosUpdateEntity(SonosPollingEntity, UpdateEntity):
         self._attr_installed_version = speaker.software_version
         self._update_url: str | None = None
 
+    @property
+    @override
+    def available(self) -> bool:
+        """Stay available while the speaker is offline installing the update."""
+        return self.in_progress is True or super().available
+
     @override
     def poll_state(self) -> None:
         """Poll the speaker for an available update."""
@@ -92,7 +104,8 @@ class SonosUpdateEntity(SonosPollingEntity, UpdateEntity):
         self._attr_update_percentage = None
         self.async_write_ha_state()
         try:
-            await self.hass.async_add_executor_job(self._monitor_update)
+            if await self.hass.async_add_executor_job(self._monitor_update):
+                await self._async_wait_for_reboot()
         finally:
             self._attr_in_progress = False
             self._attr_update_percentage = None
@@ -106,18 +119,55 @@ class SonosUpdateEntity(SonosPollingEntity, UpdateEntity):
         self.soco.begin_software_update(self._update_url)
 
     @soco_error()
-    def _monitor_update(self) -> None:
-        """Report update progress until the speaker reboots."""
+    def _monitor_update(self) -> bool:
+        """Report update progress until the speaker reboots.
+
+        Returns whether the speaker is rebooting into the new version.
+        """
         try:
             for progress in monitor_update(self.soco.ip_address):
-                self._attr_update_percentage = progress.percent
-                self.schedule_update_ha_state()
+                self.hass.add_job(self._async_set_progress, progress.percent)
         except (ConnectionError, TimeoutError) as err:
             # The update carries on without a monitoring connection, and the
             # next poll picks up the new version.
             _LOGGER.debug(
                 "Lost update progress for %s: %s", self.speaker.zone_name, err
             )
-            return
+            return False
         # The speaker closes the connection when it reboots into the new version.
-        self._attr_installed_version = self.latest_version
+        return True
+
+    @callback
+    def _async_set_progress(self, percent: int) -> None:
+        """Write one progress report."""
+        self._attr_update_percentage = percent
+        self.async_write_ha_state()
+
+    async def _async_wait_for_reboot(self) -> None:
+        """Wait for the speaker to come back on the new version and reconnect."""
+        previous_version = self.installed_version
+        try:
+            async with asyncio.timeout(REBOOT_TIMEOUT):
+                while True:
+                    await asyncio.sleep(REBOOT_POLL_INTERVAL)
+                    version = await self.hass.async_add_executor_job(
+                        self._fetch_software_version
+                    )
+                    if version and version != previous_version:
+                        break
+        except TimeoutError:
+            _LOGGER.debug("%s did not come back after updating", self.speaker.zone_name)
+            return
+        self._attr_installed_version = version
+        # Reconnect now rather than waiting for the speaker to be rediscovered.
+        async_dispatcher_send(self.hass, f"{SONOS_REBOOTED}-{self.soco.uid}")
+
+    def _fetch_software_version(self) -> str | None:
+        """Return the speaker's software version, or None while it is offline."""
+        try:
+            info = self.soco.get_speaker_info(
+                refresh=True, timeout=REBOOT_POLL_INTERVAL
+            )
+        except OSError, SoCoException, Timeout:
+            return None
+        return info["software_version"]
