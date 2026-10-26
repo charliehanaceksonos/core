@@ -53,6 +53,7 @@ class SonosUpdateEntity(SonosPollingEntity, UpdateEntity):
     """Software update for a Sonos speaker."""
 
     _attr_device_class = UpdateDeviceClass.FIRMWARE
+    _attr_title = "Sonos"
     _attr_supported_features = (
         UpdateEntityFeature.INSTALL | UpdateEntityFeature.PROGRESS
     )

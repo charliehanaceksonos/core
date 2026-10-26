@@ -11,6 +11,7 @@ from homeassistant.components.update import (
     ATTR_IN_PROGRESS,
     ATTR_INSTALLED_VERSION,
     ATTR_LATEST_VERSION,
+    ATTR_TITLE,
     DOMAIN as UPDATE_DOMAIN,
     SERVICE_INSTALL,
 )
@@ -30,6 +31,7 @@ async def test_up_to_date(hass: HomeAssistant) -> None:
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "49.2-64250"
     assert state.attributes[ATTR_LATEST_VERSION] == "49.2-64250"
+    assert state.attributes[ATTR_TITLE] == "Sonos"
 
 
 @pytest.mark.parametrize(
