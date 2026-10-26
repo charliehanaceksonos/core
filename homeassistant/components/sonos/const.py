@@ -17,6 +17,7 @@ PLATFORMS = [
     Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,
+    Platform.UPDATE,
 ]
 
 UPNP_ISSUE_ID = "upnp_disabled"
@@ -169,6 +170,7 @@ SONOS_CREATE_SELECTS = "sonos_create_selects"
 SONOS_CREATE_SWITCHES = "sonos_create_switches"
 SONOS_CREATE_LEVELS = "sonos_create_levels"
 SONOS_CREATE_MEDIA_PLAYER = "sonos_create_media_player"
+SONOS_CREATE_UPDATE = "sonos_create_update"
 SONOS_FALLBACK_POLL = "sonos_fallback_poll"
 SONOS_ALARMS_UPDATED = "sonos_alarms_updated"
 SONOS_FAVORITES_UPDATED = "sonos_favorites_updated"
