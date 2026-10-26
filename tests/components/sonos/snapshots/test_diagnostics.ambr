@@ -38,7 +38,7 @@
           'switch.zone_a_subwoofer_enabled',
           'switch.zone_a_surround_enabled',
           'switch.zone_a_surround_music_full_volume',
-          'update.zone_a_firmware',
+          'update.zone_a',
         ]),
         'event_stats': dict({
           'soco:parse_event_xml': list([
@@ -131,7 +131,7 @@
       'switch.zone_a_subwoofer_enabled',
       'switch.zone_a_surround_enabled',
       'switch.zone_a_surround_music_full_volume',
-      'update.zone_a_firmware',
+      'update.zone_a',
     ]),
     'event_stats': dict({
       'soco:parse_event_xml': list([

@@ -19,7 +19,7 @@ from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
-UPDATE_ENTITY = "update.zone_a_firmware"
+UPDATE_ENTITY = "update.zone_a"
 UPDATE_URL = "http://update.example.com/^97.2-81220"
 UPDATE_AVAILABLE = UpdateStatus("97.1-80312", "97.2-81220", UPDATE_URL)
 
@@ -31,7 +31,8 @@ async def test_up_to_date(hass: HomeAssistant) -> None:
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "49.2-64250"
     assert state.attributes[ATTR_LATEST_VERSION] == "49.2-64250"
-    assert state.attributes[ATTR_TITLE] == "Sonos"
+    assert state.attributes[ATTR_TITLE] == "Model Name"
+    assert state.name == "Zone A"
 
 
 @pytest.mark.parametrize(
