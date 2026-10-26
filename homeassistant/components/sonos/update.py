@@ -99,11 +99,12 @@ class SonosUpdateEntity(SonosPollingEntity, UpdateEntity):
         self, version: str | None, backup: bool, **kwargs: Any
     ) -> None:
         """Update the speaker and follow its progress until it reboots."""
-        await self.hass.async_add_executor_job(self._begin_update)
+        # The speaker goes offline as soon as the update starts.
         self._attr_in_progress = True
         self._attr_update_percentage = None
         self.async_write_ha_state()
         try:
+            await self.hass.async_add_executor_job(self._begin_update)
             if await self.hass.async_add_executor_job(self._monitor_update):
                 await self._async_wait_for_reboot()
         finally:
