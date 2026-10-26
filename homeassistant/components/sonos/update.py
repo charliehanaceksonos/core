@@ -25,7 +25,6 @@ from .speaker import SonosSpeaker
 
 _LOGGER = logging.getLogger(__name__)
 
-# Speakers check for updates on their own; polling reads their cached result.
 SCAN_INTERVAL = dt.timedelta(hours=1)
 
 PARALLEL_UPDATES = 1
