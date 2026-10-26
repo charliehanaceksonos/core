@@ -22,6 +22,7 @@ from soco.data_structures import (
 )
 from soco.events_base import Event as SonosEvent
 from soco.exceptions import SoCoUPnPException
+from soco.update import UpdateStatus
 
 from homeassistant.components import ssdp
 from homeassistant.components.media_player import DOMAIN as MP_DOMAIN
@@ -323,6 +324,9 @@ class SoCoMockFactory:
         mock_soco.get_battery_info.return_value = self.battery_info
         mock_soco.group.coordinator = mock_soco
         mock_soco.household_id = "test_household_id"
+        mock_soco.check_for_update.return_value = UpdateStatus(
+            "49.2-64250", "49.2-64250", "http://update.example.com/^49.2-64250"
+        )
         self.mock_list[ip_address] = mock_soco
         return mock_soco
 

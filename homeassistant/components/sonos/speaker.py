@@ -51,6 +51,7 @@ from .const import (
     SONOS_CREATE_MIC_SENSOR,
     SONOS_CREATE_SELECTS,
     SONOS_CREATE_SWITCHES,
+    SONOS_CREATE_UPDATE,
     SONOS_FALLBACK_POLL,
     SONOS_REBOOTED,
     SONOS_SPEAKER_ACTIVITY,
@@ -267,6 +268,7 @@ class SonosSpeaker:
         dispatches.append((SONOS_CREATE_SELECTS, self))
         dispatches.append((SONOS_CREATE_SWITCHES, self))
         dispatches.append((SONOS_CREATE_BUTTON, self))
+        dispatches.append((SONOS_CREATE_UPDATE, self))
         dispatches.append((SONOS_CREATE_MEDIA_PLAYER, self))
         dispatches.append((SONOS_SPEAKER_ADDED, self.soco.uid))
 
