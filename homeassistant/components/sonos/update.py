@@ -21,7 +21,12 @@ from homeassistant.helpers.dispatcher import (
 )
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import SONOS_CREATE_UPDATE, SONOS_REBOOTED, SONOS_SPEAKER_ACTIVITY
+from .const import (
+    SONOS_CREATE_UPDATE,
+    SONOS_REBOOTED,
+    SONOS_SPEAKER_ACTIVITY,
+    SONOS_STATE_UPDATED,
+)
 from .entity import SonosPollingEntity
 from .exception import SonosUpdateError
 from .helpers import SonosConfigEntry, soco_error
@@ -33,7 +38,8 @@ SCAN_INTERVAL = dt.timedelta(hours=1)
 REBOOT_POLL_INTERVAL = 5
 REBOOT_TIMEOUT = 300
 
-PARALLEL_UPDATES = 1
+# Speakers update independently, so "Update all" can run them at the same time.
+PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
@@ -71,6 +77,35 @@ class SonosUpdateEntity(SonosPollingEntity, UpdateEntity):
         self._attr_title = speaker.model_name
         self._attr_installed_version = speaker.software_version
         self._update_url: str | None = None
+        self._speaker_offline = False
+
+    @override
+    async def async_added_to_hass(self) -> None:
+        """Check for an update again whenever the speaker comes back online."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                f"{SONOS_STATE_UPDATED}-{self.soco.uid}",
+                self._async_speaker_updated,
+            )
+        )
+
+    @callback
+    def _async_speaker_updated(self) -> None:
+        """Refresh after the speaker reconnects, since a reboot can change its version."""
+        was_offline = self._speaker_offline
+        self._speaker_offline = not self.speaker.available
+        if was_offline and self.speaker.available and not self.in_progress:
+            self.async_schedule_update_ha_state(force_refresh=True)
+
+    @property
+    @override
+    def release_summary(self) -> str | None:
+        """Show which version the speaker updates from, not just to."""
+        if self.installed_version == self.latest_version:
+            return None
+        return f"{self.installed_version} → {self.latest_version}"
 
     @property
     @override

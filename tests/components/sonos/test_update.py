@@ -12,6 +12,7 @@ from homeassistant.components.update import (
     ATTR_IN_PROGRESS,
     ATTR_INSTALLED_VERSION,
     ATTR_LATEST_VERSION,
+    ATTR_RELEASE_SUMMARY,
     ATTR_TITLE,
     ATTR_UPDATE_PERCENTAGE,
     DOMAIN as UPDATE_DOMAIN,
@@ -34,6 +35,7 @@ async def test_up_to_date(hass: HomeAssistant) -> None:
     assert state.state == STATE_OFF
     assert state.attributes[ATTR_INSTALLED_VERSION] == "49.2-64250"
     assert state.attributes[ATTR_LATEST_VERSION] == "49.2-64250"
+    assert state.attributes[ATTR_RELEASE_SUMMARY] is None
     assert state.attributes[ATTR_TITLE] == "Model Name"
     assert state.name == "Zone A"
 
@@ -174,3 +176,27 @@ async def test_install_failed(
     state = hass.states.get(UPDATE_ENTITY)
     assert state.state == STATE_ON
     assert state.attributes[ATTR_IN_PROGRESS] is False
+
+
+async def test_check_after_reconnect(
+    hass: HomeAssistant,
+    async_setup_sonos: Callable[[], Coroutine[Any, Any, None]],
+    config_entry: MockConfigEntry,
+    soco: MagicMock,
+) -> None:
+    """Test a reboot onto another version is picked up without waiting a poll."""
+    await async_setup_sonos()
+    assert hass.states.get(UPDATE_ENTITY).state == STATE_OFF
+    speaker = config_entry.runtime_data.discovered[soco.uid]
+
+    await speaker.async_offline()
+    await hass.async_block_till_done()
+    soco.check_for_update.return_value = UPDATE_AVAILABLE
+    with patch.object(speaker, "_resub_cooldown_expires_at", None):
+        speaker.speaker_activity("discovery")
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    state = hass.states.get(UPDATE_ENTITY)
+    assert state.state == STATE_ON
+    assert state.attributes[ATTR_INSTALLED_VERSION] == "97.1-80312"
+    assert state.attributes[ATTR_RELEASE_SUMMARY] == "97.1-80312 → 97.2-81220"
