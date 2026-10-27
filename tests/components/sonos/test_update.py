@@ -36,7 +36,7 @@ async def test_up_to_date(hass: HomeAssistant) -> None:
     assert state.attributes[ATTR_INSTALLED_VERSION] == "49.2-64250"
     assert state.attributes[ATTR_LATEST_VERSION] == "49.2-64250"
     assert state.attributes[ATTR_RELEASE_SUMMARY] is None
-    assert state.attributes[ATTR_TITLE] == "Model Name"
+    assert state.attributes[ATTR_TITLE] is None
     assert state.name == "Zone A"
 
 

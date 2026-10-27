@@ -74,7 +74,6 @@ class SonosUpdateEntity(SonosPollingEntity, UpdateEntity):
         """Initialize the update entity."""
         super().__init__(speaker, config_entry)
         self._attr_unique_id = f"{self.soco.uid}-firmware"
-        self._attr_title = speaker.model_name
         self._attr_installed_version = speaker.software_version
         self._update_url: str | None = None
         self._speaker_offline = False
